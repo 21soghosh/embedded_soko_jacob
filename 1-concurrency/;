@@ -23,7 +23,7 @@ struct Args {
     regex: String,
 
     /// Which version of the grep to run
-    #[arg(default_value = "self-made", short, long)]
+    #[arg(required = false, short, long)]
     kind: Kind,
 
     /// The paths in which mygrep should search, if empty, in the current directory

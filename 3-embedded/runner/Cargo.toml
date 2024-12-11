@@ -1,0 +1,10 @@
+[package]
+name = "embedded-assignment-runner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tudelft-arm-qemu-runner = { version="0.2" }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features=["fmt"] }
+color-eyre = "0.6.2"

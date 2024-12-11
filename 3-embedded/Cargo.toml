@@ -1,0 +1,11 @@
+[workspace]
+members = ["embedded-code", "runner"]
+default-members = ["embedded-code"]
+resolver = "2"
+
+[profile.release]
+strip=false
+
+[profile.dev]
+strip=false
+

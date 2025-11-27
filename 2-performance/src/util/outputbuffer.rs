@@ -59,13 +59,13 @@ impl OutputBuffer {
     pub fn set_at(&mut self, x: usize, y: usize, color: Vector) {
         self.buffer[y][x] = color;
 
-        let mut f = File::create(self.backup_location.clone()).unwrap();
-        for row in &self.buffer {
-            for column in row {
-                write!(f, "{}, {}, {};", column.x, column.y, column.z).unwrap();
-                f.flush().unwrap();
-            }
-            writeln!(f).unwrap();
-        }
+        // let mut f = File::create(self.backup_location.clone()).unwrap();
+        // for row in &self.buffer {
+        //     for column in row {
+        //         write!(f, "{}, {}, {};", column.x, column.y, column.z).unwrap();
+        //         //f.flush().unwrap();
+        //     }
+        //     writeln!(f).unwrap();
+        // }
     }
 }

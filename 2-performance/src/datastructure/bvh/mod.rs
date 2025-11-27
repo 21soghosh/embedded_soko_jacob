@@ -75,7 +75,7 @@ impl KDTreeDataStructure {
         debug!("Cached triangles locally");
 
         let root = BVHNode::new(triangles);
-        println!("{}", root);
+        //println!("{}", root);
 
         Self { root }
     }

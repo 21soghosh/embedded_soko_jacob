@@ -3,6 +3,7 @@ use crate::raytracer::RayTracer;
 use crate::shader::Shader;
 use crate::util::camera::Camera;
 use std::sync::{Arc, Mutex};
+// use crate::util::ray::Ray;
 
 use crate::util::vector::Vector;
 

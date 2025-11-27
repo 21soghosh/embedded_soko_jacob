@@ -9,9 +9,7 @@ pub struct OutputBuffer {
 
 impl OutputBuffer {
     pub fn new() -> Self {
-        Self {
-            buffer: Vec::new(),
-        }
+        Self { buffer: Vec::new() }
     }
 
     pub fn presize(&mut self, width: usize, height: usize) {
@@ -30,9 +28,7 @@ impl OutputBuffer {
     }
 
     pub fn from_buffer(buffer: Vec<Vec<Vector>>) -> Self {
-        Self {
-            buffer,
-        }
+        Self { buffer }
     }
 
     pub fn to_bmp(&self) -> Image {
@@ -49,6 +45,7 @@ impl OutputBuffer {
         img
     }
 
+    #[inline(always)]
     pub fn set_at(&mut self, x: usize, y: usize, color: Vector) {
         self.buffer[y][x] = color;
 

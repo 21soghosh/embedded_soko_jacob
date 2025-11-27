@@ -36,7 +36,7 @@ impl Camera {
         }
     }
 
-    pub fn generate_ray(&self, x: f64, y: f64) -> Box<Ray> {
+    pub fn generate_ray(&self, x: f64, y: f64) -> Ray {
         let xdir = (2f64 * x as f64 * self.inf_width - 1f64) * self.angle * self.aspect_ratio;
         let ydir = (1f64 - 2f64 * y as f64 * self.inf_height) * self.angle;
 
@@ -45,6 +45,6 @@ impl Camera {
             .rotated(self.direction)
             .rotated(Vector::new(0., 0., -1.));
 
-        Box::new(Ray::new(self.pos, raydir))
+        Ray::new(self.pos, raydir)
     }
 }

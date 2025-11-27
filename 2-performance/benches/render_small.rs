@@ -2,7 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use rusttracer::render_dev;
 
 fn small_sample() -> Criterion {
-    Criterion::default().sample_size(10)
+    Criterion::default().sample_size(100)
 }
 
 fn bench_render_small(c: &mut Criterion) {

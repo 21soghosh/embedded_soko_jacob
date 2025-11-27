@@ -1,9 +1,7 @@
 use crate::datastructure::bvh::boundingbox::BoundingBox;
 use crate::scene::triangle::Triangle;
 use crate::util::vector::Vector;
-use core::fmt;
 use log::debug;
-use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
 pub enum BVHNode {
@@ -19,36 +17,10 @@ pub enum BVHNode {
     },
 }
 
-impl Display for BVHNode {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.print(f, 0)
-    }
-}
+
 
 impl BVHNode {
-    fn print(&self, f: &mut Formatter<'_>, depth: usize) -> fmt::Result {
-        match self {
-            BVHNode::Leaf {
-                bounding_box: _,
-                triangles,
-            } => {
-                write!(f, "{}", "\t".repeat(depth))?;
-                writeln!(f, "leaf node with {} triangles:", triangles.len(),)?;
-            }
-            BVHNode::Node {
-                left,
-                right,
-                bounding_box: _,
-            } => {
-                write!(f, "{}", "\t".repeat(depth))?;
-                writeln!(f, ">>")?;
-                left.print(f, depth + 1)?;
-                right.print(f, depth + 1)?;
-            }
-        }
-
-        Ok(())
-    }
+    
 
     pub fn new(triangles: Vec<Arc<Triangle>>) -> Self {
         debug!("Creating new KD Tree with {} triangles", triangles.len());

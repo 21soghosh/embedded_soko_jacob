@@ -8,7 +8,7 @@ pub struct BasicGenerator;
 
 impl Generator for BasicGenerator {
     fn generate(&self, camera: &Camera, callback: &Callback) -> OutputBuffer {
-        let mut output = OutputBuffer::with_size(camera.width, camera.height, "backup.rgb");
+        let mut output = OutputBuffer::with_size(camera.width, camera.height);
 
         for x in 0..camera.width {
             for y in 0..camera.height {

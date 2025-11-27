@@ -1,23 +1,15 @@
 use crate::util::color::Color;
 use crate::util::vector::Vector;
 use bmp::{px, Image, Pixel};
-use std::fs::File;
-use std::io::Write;
-
-use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
 pub struct OutputBuffer {
     buffer: Vec<Vec<Vector>>,
-    backup_location: PathBuf,
 }
 
 impl OutputBuffer {
-    pub fn new(backup_location: impl AsRef<Path>) -> Self {
-        Self {
-            buffer: Vec::new(),
-            backup_location: backup_location.as_ref().to_path_buf(),
-        }
+    pub fn new() -> Self {
+        Self { buffer: Vec::new() }
     }
 
     pub fn presize(&mut self, width: usize, height: usize) {
@@ -29,17 +21,14 @@ impl OutputBuffer {
         }
     }
 
-    pub fn with_size(width: usize, height: usize, backup_location: impl AsRef<Path>) -> Self {
-        let mut res = Self::new(backup_location);
+    pub fn with_size(width: usize, height: usize) -> Self {
+        let mut res = Self::new();
         res.presize(width, height);
         res
     }
 
-    pub fn from_buffer(buffer: Vec<Vec<Vector>>, backup_location: impl AsRef<Path>) -> Self {
-        Self {
-            buffer,
-            backup_location: backup_location.as_ref().to_path_buf(),
-        }
+    pub fn from_buffer(buffer: Vec<Vec<Vector>>) -> Self {
+        Self { buffer }
     }
 
     pub fn to_bmp(&self) -> Image {
@@ -56,16 +45,17 @@ impl OutputBuffer {
         img
     }
 
+    #[inline(always)]
     pub fn set_at(&mut self, x: usize, y: usize, color: Vector) {
         self.buffer[y][x] = color;
 
-        let mut f = File::create(self.backup_location.clone()).unwrap();
-        for row in &self.buffer {
-            for column in row {
-                write!(f, "{}, {}, {};", column.x, column.y, column.z).unwrap();
-                f.flush().unwrap();
-            }
-            writeln!(f).unwrap();
-        }
+        // let mut f = File::create(self.backup_location.clone()).unwrap();
+        // for row in &self.buffer {
+        //     for column in row {
+        //         write!(f, "{}, {}, {};", column.x, column.y, column.z).unwrap();
+        //         f.flush().unwrap();
+        //     }
+        //     writeln!(f).unwrap();
+        // }
     }
 }

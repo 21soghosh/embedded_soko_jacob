@@ -32,8 +32,7 @@ camera:
 
 generator:
   threaded:
-    threads:
-      all
+    threads: all
 
 raytracer:
   samples_per_pixel: 200

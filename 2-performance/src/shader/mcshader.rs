@@ -10,12 +10,12 @@ pub struct McShader;
 impl McShader {
     pub fn shade_internal(
         &self,
-        ray: Box<Ray>,
+        ray: Ray,
         depth: usize,
         datastructure: Arc<Mutex<Box<dyn DataStructure>>>,
     ) -> Vector {
         let intersection =
-            if let Some(intersection) = datastructure.lock().unwrap().intersects(*ray.clone()) {
+            if let Some(intersection) = datastructure.lock().unwrap().intersects(&ray) {
                 intersection
             } else {
                 return Vector::repeated(0f64);
@@ -30,7 +30,7 @@ impl McShader {
                 Vector::point_on_hemisphere().rotated(intersection.triangle.normal());
             let bounce_ray = Ray::new(hit_pos, bounce_direction);
             let indirect_light =
-                self.shade_internal(Box::new(bounce_ray), depth - 1, datastructure);
+                self.shade_internal(bounce_ray, depth - 1, datastructure);
             indirect_light * diffuse(&intersection, hit_pos, hit_pos + bounce_direction)
         } else {
             Vector::repeated(0f64)
@@ -41,7 +41,7 @@ impl McShader {
 }
 
 impl Shader for McShader {
-    fn shade(&self, ray: Box<Ray>, datastructure: Arc<Mutex<Box<dyn DataStructure>>>) -> Vector {
+    fn shade(&self, ray: Ray, datastructure: Arc<Mutex<Box<dyn DataStructure>>>) -> Vector {
         self.shade_internal(ray, 4, datastructure)
     }
 }

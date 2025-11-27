@@ -8,7 +8,7 @@ use std::sync::Arc;
 /// Represents the intersection point between a ray and a triangle.
 pub struct Intersection {
     /// The original ray that was used to get this intersection.
-    pub ray: Box<Ray>,
+    pub ray: Ray,
     /// the uv (barycentric) coordinates of the hitpoint on the triangle.
     pub uv: (f64, f64),
     /// The distance from the ray origin to the hitpoint on the triangle.

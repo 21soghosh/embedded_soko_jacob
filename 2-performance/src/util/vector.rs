@@ -1,6 +1,5 @@
 use crate::util::color::Color;
-use crate::util::get_rng;
-use rand::Rng;
+use crate::util::random_f64;
 use serde::{Deserialize, Serialize};
 use std::f64;
 use std::ops::{Add, AddAssign, Div, Mul, Sub};
@@ -42,10 +41,12 @@ impl Vector {
         self.x.abs() < EPSILON && self.y.abs() < EPSILON && self.z.abs() < EPSILON
     }
 
+    #[inline(always)]
     pub fn dot(&self, other: Self) -> f64 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
+    #[inline(always)]
     pub fn cross(&self, other: Self) -> Self {
         Vector::new(
             self.y * other.z - self.z * other.y,
@@ -54,10 +55,12 @@ impl Vector {
         )
     }
 
+    #[inline(always)]
     pub fn length2(&self) -> f64 {
         self.x.powi(2) + self.y.powi(2) + self.z.powi(2)
     }
 
+    #[inline(always)]
     pub fn length(&self) -> f64 {
         self.length2().sqrt()
     }
@@ -71,11 +74,13 @@ impl Vector {
         }
     }
 
+    #[inline(always)]
     pub fn unit(&self) -> Vector {
         let length = self.length();
         Vector::new(self.x / length, self.y / length, self.z / length)
     }
 
+    #[inline(always)]
     pub fn powf(&self, exp: f64) -> Vector {
         Vector::new(self.x.powf(exp), self.y.powf(exp), self.z.powf(exp))
     }
@@ -133,8 +138,8 @@ impl Vector {
     }
 
     pub fn point_on_hemisphere() -> Vector {
-        let theta = get_rng().gen::<f64>() * 2f64 * f64::consts::PI;
-        let phi = (1f64 - 2f64 * get_rng().gen::<f64>()).acos();
+        let theta = random_f64() * 2f64 * f64::consts::PI;
+        let phi = (1f64 - 2f64 * random_f64()).acos();
 
         Vector::new(
             phi.sin() * theta.cos(),
@@ -144,16 +149,15 @@ impl Vector {
     }
 
     pub fn point_on_sphere() -> Vector {
-        let theta = get_rng().gen::<f64>() * 2f64 * f64::consts::PI;
-        let phi = (1f64 - 2f64 * get_rng().gen::<f64>()).acos();
+        let theta = random_f64() * 2f64 * f64::consts::PI;
+        let phi = (1f64 - 2f64 * random_f64()).acos();
 
         Vector::new(phi.sin() * theta.cos(), phi.sin() * theta.sin(), phi.cos())
     }
 
     pub fn point_on_diffuse_hemisphere() -> Vector {
-        let u = get_rng().gen::<f64>();
-        let v = 2. * f64::consts::PI * get_rng().gen::<f64>();
-
+        let u = random_f64();
+        let v = 2. * f64::consts::PI * random_f64();
         Vector::new(v.cos() * u.sqrt(), (1. - u).sqrt(), v.sin() * u.sqrt())
     }
 }
@@ -183,6 +187,7 @@ impl Mul<Vector> for f64 {
 impl Add for Vector {
     type Output = Vector;
 
+    #[inline(always)]
     fn add(self, rhs: Self) -> Self::Output {
         Self {
             x: self.x + rhs.x,
@@ -203,6 +208,7 @@ impl AddAssign for Vector {
 impl Sub for Vector {
     type Output = Vector;
 
+    #[inline(always)]
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
             x: self.x - rhs.x,
@@ -227,6 +233,7 @@ impl Div<f64> for Vector {
 impl Mul<f64> for Vector {
     type Output = Vector;
 
+    #[inline(always)]
     fn mul(self, rhs: f64) -> Self::Output {
         Self {
             x: self.x * rhs,

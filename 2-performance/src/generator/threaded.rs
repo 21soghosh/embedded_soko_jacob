@@ -4,8 +4,6 @@ use crate::util::outputbuffer::OutputBuffer;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use log::info;
-
 #[derive(Debug)]
 pub struct ThreadedGenerator {
     threads: usize,
@@ -22,7 +20,6 @@ impl Generator for ThreadedGenerator {
         let output = Arc::new(Mutex::new(OutputBuffer::with_size(
             camera.width,
             camera.height,
-            "backup.rgb",
         )));
 
         thread::scope(|s| {
@@ -46,12 +43,12 @@ impl Generator for ThreadedGenerator {
                             continue;
                         }
 
+                        let mut guard = local_output.lock().unwrap();
                         for x in 0..camera.width {
-                            let mut guard = local_output.lock().unwrap();
                             guard.set_at(x, y, callback(x, y));
                         }
 
-                        info!("Finished row {}", y);
+                        // info!("Finished row {}", y);
                     }
                 });
             }

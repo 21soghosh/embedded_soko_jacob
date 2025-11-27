@@ -2,7 +2,6 @@ use crate::datastructure::DataStructure;
 use crate::raytracer::RayTracer;
 use crate::shader::Shader;
 use crate::util::camera::Camera;
-use std::io::{stdout, Write};
 use std::sync::{Arc, Mutex};
 
 use crate::util::vector::Vector;

@@ -1,22 +1,16 @@
 use crate::util::color::Color;
 use crate::util::vector::Vector;
 use bmp::{px, Image, Pixel};
-use std::fs::File;
-use std::io::Write;
-
-use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
 pub struct OutputBuffer {
     buffer: Vec<Vec<Vector>>,
-    backup_location: PathBuf,
 }
 
 impl OutputBuffer {
-    pub fn new(backup_location: impl AsRef<Path>) -> Self {
+    pub fn new() -> Self {
         Self {
             buffer: Vec::new(),
-            backup_location: backup_location.as_ref().to_path_buf(),
         }
     }
 
@@ -29,16 +23,15 @@ impl OutputBuffer {
         }
     }
 
-    pub fn with_size(width: usize, height: usize, backup_location: impl AsRef<Path>) -> Self {
-        let mut res = Self::new(backup_location);
+    pub fn with_size(width: usize, height: usize) -> Self {
+        let mut res = Self::new();
         res.presize(width, height);
         res
     }
 
-    pub fn from_buffer(buffer: Vec<Vec<Vector>>, backup_location: impl AsRef<Path>) -> Self {
+    pub fn from_buffer(buffer: Vec<Vec<Vector>>) -> Self {
         Self {
             buffer,
-            backup_location: backup_location.as_ref().to_path_buf(),
         }
     }
 

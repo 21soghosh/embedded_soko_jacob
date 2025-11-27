@@ -1,6 +1,5 @@
 use crate::util::color::Color;
-use crate::util::get_rng;
-use rand::Rng;
+use crate::util::random_f64;
 use serde::{Deserialize, Serialize};
 use std::f64;
 use std::ops::{Add, AddAssign, Div, Mul, Sub};
@@ -133,8 +132,8 @@ impl Vector {
     }
 
     pub fn point_on_hemisphere() -> Vector {
-        let theta = get_rng().gen::<f64>() * 2f64 * f64::consts::PI;
-        let phi = (1f64 - 2f64 * get_rng().gen::<f64>()).acos();
+        let theta = random_f64() * 2f64 * f64::consts::PI;
+        let phi = (1f64 - 2f64 * random_f64()).acos();
 
         Vector::new(
             phi.sin() * theta.cos(),
@@ -144,16 +143,15 @@ impl Vector {
     }
 
     pub fn point_on_sphere() -> Vector {
-        let theta = get_rng().gen::<f64>() * 2f64 * f64::consts::PI;
-        let phi = (1f64 - 2f64 * get_rng().gen::<f64>()).acos();
+        let theta = random_f64() * 2f64 * f64::consts::PI;
+        let phi = (1f64 - 2f64 * random_f64()).acos();
 
         Vector::new(phi.sin() * theta.cos(), phi.sin() * theta.sin(), phi.cos())
     }
 
     pub fn point_on_diffuse_hemisphere() -> Vector {
-        let u = get_rng().gen::<f64>();
-        let v = 2. * f64::consts::PI * get_rng().gen::<f64>();
-
+        let u = random_f64();
+        let v = 2. * f64::consts::PI * random_f64();
         Vector::new(v.cos() * u.sqrt(), (1. - u).sqrt(), v.sin() * u.sqrt())
     }
 }

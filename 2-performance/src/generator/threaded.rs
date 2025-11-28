@@ -17,9 +17,12 @@ impl ThreadedGenerator {
 
 impl Generator for ThreadedGenerator {
     fn generate(&self, camera: &Camera, callback: &Callback) -> OutputBuffer {
+
+        let width = camera.width;
+        let height = camera.height;
         let output = Arc::new(Mutex::new(OutputBuffer::with_size(
-            camera.width,
-            camera.height,
+            width,
+            height,
         )));
 
         thread::scope(|s| {
@@ -31,7 +34,7 @@ impl Generator for ThreadedGenerator {
                 };
 
             // ceiling division
-            let chunks = (camera.height + rows_per_thread - 1) / rows_per_thread;
+            let chunks = (height + rows_per_thread - 1) / rows_per_thread;
 
             for index in 0..chunks {
                 let start_y = index * rows_per_thread;
@@ -39,12 +42,12 @@ impl Generator for ThreadedGenerator {
                 let local_output = Arc::clone(&output);
                 s.spawn(move || {
                     for y in start_y..(start_y + rows_per_thread) {
-                        if y >= camera.height {
+                        if y >= height {
                             continue;
                         }
 
                         let mut guard = local_output.lock().unwrap();
-                        for x in 0..camera.width {
+                        for x in 0..width {
                             guard.set_at(x, y, callback(x, y));
                         }
 

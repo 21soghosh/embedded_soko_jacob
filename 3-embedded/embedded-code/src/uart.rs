@@ -50,11 +50,40 @@ impl RingBuffer {
     }
 }
 
-pub struct Uart {}
+pub struct Uart {
+    uart: UART0,
+}
 
 impl Uart {
     pub fn new(uart: UART0) -> Self {
-        todo!()
+        let mut uart = uart;
+
+        // disable the UART while we configure it
+        uart.ctl.write(|w| w.uart_ctl_uarten().clear_bit());
+
+        // configure for 115200 baud assuming 50 MHz system clock
+        uart.ibrd
+            .write(|w| unsafe { w.uart_ibrd_divint().bits(27) });
+        uart.fbrd
+            .write(|w| unsafe { w.uart_fbrd_divfrac().bits(8) });
+
+        // 8N1 with FIFO enabled
+        uart.lcrh
+            .write(|w| w.uart_lcrh_fen().set_bit().uart_lcrh_wlen().uart_lcrh_wlen_8());
+
+        // enable receive interrupts and timeout interrupts
+        uart.im
+            .write(|w| w.uart_im_rxim().set_bit().uart_im_rtim().set_bit());
+
+        // turn the peripheral back on
+        uart.ctl
+            .write(|w| w.uart_ctl_rxe().set_bit().uart_ctl_txe().set_bit().uart_ctl_uarten().set_bit());
+
+        unsafe {
+            NVIC::unmask(Interrupt::UART0);
+        }
+
+        Self { uart }
     }
 
     pub fn write(&mut self, value: &[u8]) {

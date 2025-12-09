@@ -50,6 +50,8 @@ impl RingBuffer {
     }
 }
 
+static BUFFER: Mutex<RingBuffer> = Mutex::new(RingBuffer::new());
+
 pub struct Uart {
     uart: UART0,
 }
@@ -80,18 +82,23 @@ impl Uart {
             .write(|w| w.uart_ctl_rxe().set_bit().uart_ctl_txe().set_bit().uart_ctl_uarten().set_bit());
 
         unsafe {
-            NVIC::unmask(Interrupt::UART0);
+            cortex_m::peripheral::NVIC::unmask(tudelft_lm3s6965_pac::Interrupt::UART0);
         }
 
         Self { uart }
     }
 
     pub fn write(&mut self, value: &[u8]) {
-        todo!()
+        for &b in value {
+            // Wait until TX FIFO is not full
+            while self.uart.fr.read().uart_fr_txff().bit_is_set() {}
+            // Write byte
+            self.uart.dr.write(|w| unsafe { w.uart_dr_data().bits(b) });
+        }
     }
 
     pub fn read(&mut self) -> Option<u8> {
-        todo!()
+        BUFFER.update(|buf| buf.pop())
     }
 }
 
@@ -104,5 +111,17 @@ impl Write for Uart {
 
 #[interrupt]
 unsafe fn UART0() {
-    todo!()
+    let uart = &*tudelft_lm3s6965_pac::UART0::ptr();
+    
+    // Clear interrupts
+    uart.icr.write(|w| {
+        w.uart_icr_rxic().set_bit()
+         .uart_icr_rtic().set_bit()
+    });
+
+    // Read all available bytes from FIFO
+    while uart.fr.read().uart_fr_rxfe().bit_is_clear() {
+        let byte = uart.dr.read().uart_dr_data().bits() as u8;
+        BUFFER.update(|buf| buf.push(byte));
+    }
 }

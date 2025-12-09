@@ -9,7 +9,7 @@ use core::arch::asm;
 use core::fmt::Write;
 use cortex_m_semihosting::{hprint, hprintln};
 use drawing::brightness::Brightness;
-use drawing::font::ZERO;
+use drawing::font::ONE;
 use drawing::screen::Screen;
 use rt::entry;
 use tudelft_lm3s6965_pac::Peripherals;
@@ -32,6 +32,11 @@ fn main() -> ! {
     // initialize the screen for drawing
     let mut screen = Screen::new(&mut dp.SSI0, &mut dp.GPIO_PORTC);
     screen.clear(Brightness::WHITE);
+    let startX = Screen::WIDTH / 2;
+    let startY = Screen::HEIGHT / 2;
+
+
+    screen.draw_filled_box(startX-1, startY-1, startX+1, startY+1, Brightness::new(0));
 
     // initialize the UART.
     let mut uart = Uart::new(dp.UART0);
@@ -44,7 +49,7 @@ fn main() -> ! {
     // buffer so this read operation works)
     loop {
         while let Some(i) = uart.read() {
-            hprint!("0x{:x}", i);
+            hprintln!("{}: 0x{:x}", i as char, i);
         }
 
         // wait for interrupts, before looping again to save cycles.

@@ -21,11 +21,29 @@ pub const ZERO: Character = [
     [true, true, true, true, true, true, true, true],
     [false, true, true, true, true, true, true, false],
 ];
+pub const ONE: Character = [
+    [false, false, false, false, false, false, false, false],
+    [false, true, true, true, true, true, true, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+    [false, false, false, false, false, false, false, false],
+];
 
-pub const NUMBERS: [Character; 1] = [
+pub const NUMBERS: [Character; 2] = [
     ZERO,
     // TODO:
-    // ONE,
+    ONE,
     // TWO,
     // THREE,
     // FOUR,

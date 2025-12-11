@@ -1,15 +1,21 @@
 use std::env::args;
 use std::io::{stdin, stdout, BufRead, Read, Write};
+use std::net::Shutdown;
 use std::thread;
 
 use serde::{Deserialize, Serialize};
 use tudelft_arm_qemu_runner::Runner;
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Message {
-    dx: i8,
-    dy: i8,
-    steps: u8,
+enum Message {
+    Move { dx: i8, dy: i8 },
+    MoveTo { x: u8, y: u8 },
+}
+
+enum Command {
+    Send(Message),
+    Help,
+    Exit,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -46,14 +52,19 @@ fn main() -> color_eyre::Result<()> {
             }
 
             match parse_instruction(&line) {
-                Some(msg) => {
+                Command::Send(msg) => {
                     let mut buf = [0u8; FRAME_CAPACITY];
                     match postcard::to_slice_cobs(&msg, &mut buf) {
                         Ok(encoded) => write_stream.write_all(encoded)?,
                         Err(err) => eprintln!("Failed to encode message: {err}"),
                     }
                 }
-                None => eprintln!("Unknown command. Use: move <dx> <dy> <steps>"),
+                Command::Help => print_help(),
+                Command::Exit => {
+                    println!("Exiting runner...");
+                    let _ = write_stream.shutdown(Shutdown::Both);
+                    break;
+                }
             }
         }
 
@@ -65,16 +76,54 @@ fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
-fn parse_instruction(line: &str) -> Option<Message> {
+fn parse_instruction(line: &str) -> Command {
     let mut parts = line.split_whitespace();
-    let cmd = parts.next()?;
-    if !cmd.eq_ignore_ascii_case("move") {
-        return None;
+    let Some(cmd) = parts.next() else {
+        return Command::Help;
+    };
+
+    if cmd.eq_ignore_ascii_case("help") {
+        return Command::Help;
     }
 
-    let dx = parts.next()?.parse().ok()?;
-    let dy = parts.next()?.parse().ok()?;
-    let steps = parts.next()?.parse().ok()?;
+    if cmd.eq_ignore_ascii_case("exit") || cmd.eq_ignore_ascii_case("quit") {
+        return Command::Exit;
+    }
 
-    Some(Message { dx, dy, steps })
+    if cmd.eq_ignore_ascii_case("move") {
+        let dx = match parts.next().and_then(|p| p.parse().ok()) {
+            Some(v) => v,
+            None => return Command::Help,
+        };
+        let dy = match parts.next().and_then(|p| p.parse().ok()) {
+            Some(v) => v,
+            None => return Command::Help,
+        };
+    
+
+        return Command::Send(Message::Move { dx, dy });
+    }
+
+    if cmd.eq_ignore_ascii_case("move_to") || cmd.eq_ignore_ascii_case("moveto") {
+        let x = match parts.next().and_then(|p| p.parse().ok()) {
+            Some(v) => v,
+            None => return Command::Help,
+        };
+        let y = match parts.next().and_then(|p| p.parse().ok()) {
+            Some(v) => v,
+            None => return Command::Help,
+        };
+
+        return Command::Send(Message::MoveTo { x, y });
+    }
+
+    Command::Help
+}
+
+fn print_help() {
+    println!("Commands:");
+    println!("  move <dx> <dy>  - relative move, stepwise");
+    println!("  move_to <x> <y>         - move to absolute pixel");
+    println!("  help                    - show this help");
+    println!("  exit|quit               - stop the runner");
 }

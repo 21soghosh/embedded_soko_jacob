@@ -9,16 +9,16 @@ use core::arch::asm;
 use cortex_m_semihosting::hprintln;
 use drawing::brightness::Brightness;
 use drawing::screen::Screen;
+use message::Message;
 use rt::entry;
 use tudelft_lm3s6965_pac::Peripherals;
-use message::Message;
 
 mod drawing;
 mod exceptions;
 mod uart;
 
-mod mutex;
 mod message;
+mod mutex;
 
 #[entry]
 fn main() -> ! {
@@ -35,7 +35,13 @@ fn main() -> ! {
     let mut pos_x = Screen::WIDTH / 2;
     let mut pos_y = Screen::HEIGHT / 2;
 
-    screen.draw_filled_box(pos_x - 1, pos_y - 1, pos_x + 1, pos_y + 1, Brightness::new(0));
+    screen.draw_filled_box(
+        pos_x - 1,
+        pos_y - 1,
+        pos_x + 1,
+        pos_y + 1,
+        Brightness::new(0),
+    );
     // initialize the UART.
     let mut uart = Uart::new(dp.UART0);
 
@@ -49,9 +55,31 @@ fn main() -> ! {
                 if rx_len > 0 {
                     // postcard needs a mutable slice for in-place COBS deframing
                     match postcard::from_bytes_cobs::<Message>(&mut rx_buf[..rx_len]) {
-                        Ok(msg) => {
-                            hprintln!("Instruction: dx {}, dy {}, steps {}", msg.dx, msg.dy, msg.steps);
-                            apply_instruction(&mut screen, &mut pos_x, &mut pos_y, &msg);
+                        Ok(Message::Move { dx, dy}) => {
+                            let steps = (dx.abs() + dy.abs()) as u16;
+                            hprintln!("Instruction: move dx {}, dy {}, steps {}", dx, dy, steps);
+                            move_player(
+                                &mut screen,
+                                &mut pos_x,
+                                &mut pos_y,
+                                dx as i16,
+                                dy as i16,
+                                steps as u16,
+                            );
+                        }
+                        Ok(Message::MoveTo { x, y }) => {
+                            let remaining_x = x as i16 - pos_x as i16;
+                            let remaining_y = y as i16 - pos_y as i16;
+                            let steps = (remaining_x.abs() + remaining_y.abs()) as u16;
+                            hprintln!("Instruction: move_to x {}, y {}, steps {}", x, y, steps);
+                            move_player(
+                                &mut screen,
+                                &mut pos_x,
+                                &mut pos_y,
+                                remaining_x,
+                                remaining_y,
+                                steps,
+                            );
                         }
                         Err(_) => {
                             hprintln!("Invalid message received");
@@ -76,15 +104,29 @@ fn main() -> ! {
     }
 }
 
-fn apply_instruction(screen: &mut Screen, pos_x: &mut u8, pos_y: &mut u8, msg: &Message) {
-    for _ in 0..msg.steps {
+fn move_player(
+    screen: &mut Screen,
+    pos_x: &mut u8,
+    pos_y: &mut u8,
+    mut remaining_x: i16,
+    mut remaining_y: i16,
+    steps: u16,
+) {
+
+    for _ in 0..steps {
         screen.clear(Brightness::WHITE);
 
-        let new_x = (*pos_x as i16 + msg.dx as i16).clamp(0, Screen::WIDTH as i16 - 1) as u8;
-        let new_y = (*pos_y as i16 + msg.dy as i16).clamp(0, Screen::HEIGHT as i16 - 1) as u8;
-
-        *pos_x = new_x;
-        *pos_y = new_y;
+        if remaining_x != 0 {
+            let step = remaining_x.signum();
+            let new_x = (*pos_x as i16 + step).clamp(0, Screen::WIDTH as i16 - 1) as u8;
+            *pos_x = new_x;
+            remaining_x -= step;
+        } else if remaining_y != 0 {
+            let step = remaining_y.signum();
+            let new_y = (*pos_y as i16 + step).clamp(0, Screen::HEIGHT as i16 - 1) as u8;
+            *pos_y = new_y;
+            remaining_y -= step;
+        }
 
         let min_x = pos_x.saturating_sub(1);
         let min_y = pos_y.saturating_sub(1);

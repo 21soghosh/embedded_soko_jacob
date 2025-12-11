@@ -1,4 +1,4 @@
-use crate::serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct Message {
@@ -6,3 +6,15 @@ pub struct Message {
     pub dy: i8,
     pub steps: u8,
 }
+
+impl Message {
+    pub fn new() -> Self {
+        Self {
+            dx: 0,
+            dy: 0,
+            steps: 0,
+        }
+    }
+}
+
+

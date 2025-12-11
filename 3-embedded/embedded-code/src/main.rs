@@ -6,19 +6,19 @@ extern crate tudelft_lm3s6965_pac as _;
 
 use crate::uart::Uart;
 use core::arch::asm;
-use core::fmt::Write;
-use cortex_m_semihosting::{hprint, hprintln};
+use cortex_m_semihosting::hprintln;
 use drawing::brightness::Brightness;
-use drawing::font::ONE;
 use drawing::screen::Screen;
 use rt::entry;
 use tudelft_lm3s6965_pac::Peripherals;
+use message::Message;
 
 mod drawing;
 mod exceptions;
 mod uart;
 
 mod mutex;
+mod message;
 
 #[entry]
 fn main() -> ! {
@@ -32,27 +32,65 @@ fn main() -> ! {
     // initialize the screen for drawing
     let mut screen = Screen::new(&mut dp.SSI0, &mut dp.GPIO_PORTC);
     screen.clear(Brightness::WHITE);
-    let startX = Screen::WIDTH / 2;
-    let startY = Screen::HEIGHT / 2;
+    let mut pos_x = Screen::WIDTH / 2;
+    let mut pos_y = Screen::HEIGHT / 2;
 
-
-    screen.draw_filled_box(startX-1, startY-1, startX+1, startY+1, Brightness::new(0));
-
+    screen.draw_filled_box(pos_x - 1, pos_y - 1, pos_x + 1, pos_y + 1, Brightness::new(0));
     // initialize the UART.
     let mut uart = Uart::new(dp.UART0);
 
-    // and write something to be received by the runner
-    writeln!(&mut uart, "Hello, World!").unwrap();
+    // buffer incoming bytes until we see the COBS frame delimiter (0x00)
+    let mut rx_buf = [0u8; 32];
+    let mut rx_len = 0usize;
 
-    // while true, see if we received new bytes (you should make it so
-    // uart receives trigger an interrupt which push to some kind of
-    // buffer so this read operation works)
     loop {
-        while let Some(i) = uart.read() {
-            hprintln!("{}: 0x{:x}", i as char, i);
+        while let Some(byte) = uart.read() {
+            if byte == 0 {
+                if rx_len > 0 {
+                    // postcard needs a mutable slice for in-place COBS deframing
+                    match postcard::from_bytes_cobs::<Message>(&mut rx_buf[..rx_len]) {
+                        Ok(msg) => {
+                            hprintln!("Instruction: dx {}, dy {}, steps {}", msg.dx, msg.dy, msg.steps);
+                            apply_instruction(&mut screen, &mut pos_x, &mut pos_y, &msg);
+                        }
+                        Err(_) => {
+                            hprintln!("Invalid message received");
+                        }
+                    }
+                }
+                rx_len = 0;
+                continue;
+            }
+
+            if rx_len < rx_buf.len() {
+                rx_buf[rx_len] = byte;
+                rx_len += 1;
+            } else {
+                rx_len = 0;
+                hprintln!("Message too long, discarding");
+            }
         }
 
         // wait for interrupts, before looping again to save cycles.
         unsafe { asm!("wfi") }
+    }
+}
+
+fn apply_instruction(screen: &mut Screen, pos_x: &mut u8, pos_y: &mut u8, msg: &Message) {
+    for _ in 0..msg.steps {
+        screen.clear(Brightness::WHITE);
+
+        let new_x = (*pos_x as i16 + msg.dx as i16).clamp(0, Screen::WIDTH as i16 - 1) as u8;
+        let new_y = (*pos_y as i16 + msg.dy as i16).clamp(0, Screen::HEIGHT as i16 - 1) as u8;
+
+        *pos_x = new_x;
+        *pos_y = new_y;
+
+        let min_x = pos_x.saturating_sub(1);
+        let min_y = pos_y.saturating_sub(1);
+        let max_x = (*pos_x + 1).min(Screen::WIDTH - 1);
+        let max_y = (*pos_y + 1).min(Screen::HEIGHT - 1);
+
+        screen.draw_filled_box(min_x, min_y, max_x, max_y, Brightness::new(0));
     }
 }

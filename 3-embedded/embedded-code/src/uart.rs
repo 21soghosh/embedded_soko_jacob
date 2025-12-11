@@ -58,7 +58,7 @@ pub struct Uart {
 
 impl Uart {
     pub fn new(uart: UART0) -> Self {
-        let mut uart = uart;
+        // let mut uart = uart;
 
         // disable the UART while we configure it
         uart.ctl.write(|w| w.uart_ctl_uarten().clear_bit());

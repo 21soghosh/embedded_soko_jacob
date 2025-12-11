@@ -11,6 +11,7 @@ enum Message {
     Move { dx: i8, dy: i8 },
     MoveTo { x: u8, y: u8 },
     SetDisplayMode(DisplayMode),
+    Reset,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone)]
@@ -159,6 +160,10 @@ fn parse_instruction(line: &str) -> Command {
         return Command::Send(Message::SetDisplayMode(mode));
     }
 
+    if cmd.eq_ignore_ascii_case("reset") {
+        return Command::Send(Message::Reset);
+    }
+
     Command::Help
 }
 
@@ -167,6 +172,7 @@ fn print_help() {
     println!("  move <dx> <dy>          - relative move, stepwise");
     println!("  move_to <x> <y>         - move to absolute pixel");
     println!("  mode trail|steps        - switch display mode");
+    println!("  reset                   - reset position, steps, and trail");
     println!("  help                    - show this help");
     println!("  exit|quit               - stop the runner");
 }

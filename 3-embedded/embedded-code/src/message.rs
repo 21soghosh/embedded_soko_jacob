@@ -5,6 +5,7 @@ pub enum Message {
     Move { dx: i8, dy: i8 },
     MoveTo { x: u8, y: u8 },
     SetDisplayMode(DisplayMode),
+    Reset,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

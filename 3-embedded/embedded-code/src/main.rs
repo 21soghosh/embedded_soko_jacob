@@ -8,6 +8,7 @@ use crate::uart::Uart;
 use core::arch::asm;
 use cortex_m_semihosting::hprintln;
 use drawing::brightness::Brightness;
+use drawing::font::NUMBERS;
 use drawing::screen::Screen;
 use message::{checksum_for, DisplayMode, Envelope, Message};
 use rt::entry;
@@ -124,13 +125,14 @@ fn move_player(
         }
 
         trail.push(*pos_x, *pos_y);
-        *total_steps = total_steps.wrapping_add(1);
 
         if display_mode == DisplayMode::Trail {
             screen.draw_line(prev_x, prev_y, *pos_x, *pos_y, TRAIL_BRIGHTNESS);
             screen.draw_pixel(*pos_x, *pos_y, PLAYER_BRIGHTNESS);
         }
     }
+
+    *total_steps = total_steps.wrapping_add(1);
 
     if display_mode == DisplayMode::Steps {
         render_step_counter(screen, *total_steps);
@@ -179,6 +181,17 @@ fn handle_message(
                 total_steps,
             );
         }
+        Message::Reset => {
+            *pos_x = Screen::WIDTH / 2;
+            *pos_y = Screen::HEIGHT / 2;
+            *total_steps = 0;
+            trail.clear(*pos_x, *pos_y);
+
+            match *display_mode {
+                DisplayMode::Trail => redraw_trail(screen, trail),
+                DisplayMode::Steps => render_step_counter(screen, *total_steps),
+            }
+        }
         Message::SetDisplayMode(mode) => {
             *display_mode = mode;
             match mode {
@@ -210,21 +223,8 @@ fn redraw_trail(screen: &mut Screen, trail: &Trail) {
 }
 
 fn draw_number(screen: &mut Screen, origin_x: u8, origin_y: u8, mut value: u32) {
-    const DIGITS: [[u8; 5]; 10] = [
-        [0b111, 0b101, 0b101, 0b101, 0b111], // 0
-        [0b010, 0b110, 0b010, 0b010, 0b111], // 1
-        [0b111, 0b001, 0b111, 0b100, 0b111], // 2
-        [0b111, 0b001, 0b111, 0b001, 0b111], // 3
-        [0b101, 0b101, 0b111, 0b001, 0b001], // 4
-        [0b111, 0b100, 0b111, 0b001, 0b111], // 5
-        [0b111, 0b100, 0b111, 0b101, 0b111], // 6
-        [0b111, 0b001, 0b001, 0b001, 0b001], // 7
-        [0b111, 0b101, 0b111, 0b101, 0b111], // 8
-        [0b111, 0b101, 0b111, 0b001, 0b111], // 9
-    ];
-
     if value == 0 {
-        draw_digit(screen, origin_x, origin_y, &DIGITS[0]);
+        screen.draw_character(origin_x, origin_y, &NUMBERS[0], PLAYER_BRIGHTNESS);
         return;
     }
 
@@ -238,22 +238,9 @@ fn draw_number(screen: &mut Screen, origin_x: u8, origin_y: u8, mut value: u32) 
 
     let mut x = origin_x;
     for idx in (0..count).rev() {
-        draw_digit(screen, x, origin_y, &DIGITS[digits[idx] as usize]);
-        x += 4; // 3px digit + 1px spacing
-    }
-}
-
-fn draw_digit(screen: &mut Screen, origin_x: u8, origin_y: u8, pattern: &[u8; 5]) {
-    for (row, bits) in pattern.iter().enumerate() {
-        for col in 0..3 {
-            if (bits >> (2 - col)) & 1 == 1 {
-                let x = origin_x + col as u8;
-                let y = origin_y + row as u8;
-                if x < Screen::WIDTH && y < Screen::HEIGHT {
-                    screen.draw_pixel(x, y, Brightness::new(0));
-                }
-            }
-        }
+        let digit = digits[idx] as usize;
+        screen.draw_character(x, origin_y, &NUMBERS[digit], PLAYER_BRIGHTNESS);
+        x = x.saturating_add(9); // 8px wide + 1px spacing
     }
 }
 
@@ -282,5 +269,10 @@ impl Trail {
             }
             self.points[Trail::MAX_POINTS - 1] = (x, y);
         }
+    }
+
+    fn clear(&mut self, x: u8, y: u8) {
+        self.points[0] = (x, y);
+        self.len = 1;
     }
 }

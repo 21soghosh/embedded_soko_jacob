@@ -10,6 +10,19 @@ use tudelft_arm_qemu_runner::Runner;
 enum Message {
     Move { dx: i8, dy: i8 },
     MoveTo { x: u8, y: u8 },
+    SetDisplayMode(DisplayMode),
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+enum DisplayMode {
+    Trail,
+    Steps,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Envelope {
+    msg: Message,
+    checksum: u8,
 }
 
 enum Command {
@@ -43,7 +56,7 @@ fn main() -> color_eyre::Result<()> {
     });
 
     let writer = thread::spawn(move || -> color_eyre::Result<()> {
-        const FRAME_CAPACITY: usize = 16;
+        const FRAME_CAPACITY: usize = 32;
         let stdin = stdin();
         for line in stdin.lock().lines() {
             let line = line?;
@@ -54,9 +67,12 @@ fn main() -> color_eyre::Result<()> {
             match parse_instruction(&line) {
                 Command::Send(msg) => {
                     let mut buf = [0u8; FRAME_CAPACITY];
-                    match postcard::to_slice_cobs(&msg, &mut buf) {
-                        Ok(encoded) => write_stream.write_all(encoded)?,
-                        Err(err) => eprintln!("Failed to encode message: {err}"),
+                    match Envelope::new(msg) {
+                        Ok(envelope) => match postcard::to_slice_cobs(&envelope, &mut buf) {
+                            Ok(encoded) => write_stream.write_all(encoded)?,
+                            Err(err) => eprintln!("Failed to encode message: {err}"),
+                        },
+                        Err(err) => eprintln!("Failed to prepare message: {err}"),
                     }
                 }
                 Command::Help => print_help(),
@@ -74,6 +90,19 @@ fn main() -> color_eyre::Result<()> {
     reader.join().expect("Reader thread panicked")?;
     writer.join().expect("Writer thread panicked")?;
     Ok(())
+}
+
+impl Envelope {
+    fn new(msg: Message) -> color_eyre::Result<Self> {
+        let checksum = checksum_for(&msg)?;
+        Ok(Self { msg, checksum })
+    }
+}
+
+fn checksum_for(msg: &Message) -> color_eyre::Result<u8> {
+    let mut buf = [0u8; 32];
+    let encoded = postcard::to_slice(msg, &mut buf)?;
+    Ok(encoded.iter().fold(0u8, |acc, b| acc.wrapping_add(*b)))
 }
 
 fn parse_instruction(line: &str) -> Command {
@@ -99,8 +128,6 @@ fn parse_instruction(line: &str) -> Command {
             Some(v) => v,
             None => return Command::Help,
         };
-    
-
         return Command::Send(Message::Move { dx, dy });
     }
 
@@ -117,13 +144,29 @@ fn parse_instruction(line: &str) -> Command {
         return Command::Send(Message::MoveTo { x, y });
     }
 
+    if cmd.eq_ignore_ascii_case("mode") {
+        let Some(mode_str) = parts.next() else {
+            return Command::Help;
+        };
+        let mode = if mode_str.eq_ignore_ascii_case("trail") {
+            DisplayMode::Trail
+        } else if mode_str.eq_ignore_ascii_case("steps") {
+            DisplayMode::Steps
+        } else {
+            return Command::Help;
+        };
+
+        return Command::Send(Message::SetDisplayMode(mode));
+    }
+
     Command::Help
 }
 
 fn print_help() {
     println!("Commands:");
-    println!("  move <dx> <dy>  - relative move, stepwise");
+    println!("  move <dx> <dy>          - relative move, stepwise");
     println!("  move_to <x> <y>         - move to absolute pixel");
+    println!("  mode trail|steps        - switch display mode");
     println!("  help                    - show this help");
     println!("  exit|quit               - stop the runner");
 }

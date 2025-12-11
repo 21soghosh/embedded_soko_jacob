@@ -46,12 +46,22 @@ impl Generator for ThreadedGenerator {
                             continue;
                         }
 
+<<<<<<< HEAD
                         let mut guard = local_output.lock().unwrap();
                         for x in 0..width {
                             guard.set_at(x, y, callback(x, y));
                         }
 
                         // info!("Finished row {}", y);
+=======
+                        // Take the lock once per row instead of once per pixel to reduce contention.
+                        let mut guard = local_output.lock().unwrap();
+                        for x in 0..camera.width {
+                            guard.set_at(x, y, callback(x, y));
+                        }
+
+                        //info!("Finished row {}", y);
+>>>>>>> mutex+buffer
                     }
                 });
             }

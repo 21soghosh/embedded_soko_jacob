@@ -14,7 +14,7 @@ pub mod util;
 pub fn render_dev() {
     simple_logging::log_to_stderr(LevelFilter::Info);
 
-    Config::load("configurations/reference.yml")
+    Config::load("configurations/dev.yml")
         .unwrap()
         .run()
         .unwrap();

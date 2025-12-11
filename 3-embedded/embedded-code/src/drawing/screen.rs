@@ -121,6 +121,51 @@ impl<'p> Screen<'p> {
             }
         }
     }
+    pub fn draw_line(&mut self, x0: u8, y0: u8, x1: u8, y1: u8, brightness: Brightness) {
+        let mut x0 = x0 as i16;
+        let mut y0 = y0 as i16;
+        let x1 = x1 as i16;
+        let y1 = y1 as i16;
+
+        let dx = (x1 - x0).abs();
+        let dy = -(y1 - y0).abs();
+        let sx = if x0 < x1 { 1 } else { -1 };
+        let sy = if y0 < y1 { 1 } else { -1 };
+        let mut err = dx + dy;
+
+        loop {
+            self.draw_pixel(x0 as u8, y0 as u8, brightness);
+            if x0 == x1 && y0 == y1 { break; }
+            let e2 = 2 * err;
+            if e2 >= dy {
+                err += dy;
+                x0 += sx;
+            }
+            if e2 <= dx {
+                err += dx;
+                y0 += sy;
+            }
+        }
+    }
+
+    pub fn draw_character(&mut self, x: u8, y: u8, character: &Character, brightness: Brightness) {
+        for i in 0..16 {
+            for j in 0..8 {
+                if character[i][j] {
+                    self.draw_pixel(x + j as u8, y + i as u8, brightness);
+                }
+            }
+        }
+    }
+
+    pub fn draw_filled_box(&mut self, x0: u8, y0: u8, x1: u8, y1: u8, brightness: Brightness) {
+        for x in x0..=x1 {
+            for y in y0..=y1 {
+                self.draw_pixel(x, y, brightness);
+            }
+        }
+    }
+
 }
 
 enum Mode {

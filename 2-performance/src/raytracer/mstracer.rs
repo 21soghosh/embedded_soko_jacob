@@ -32,8 +32,13 @@ impl RayTracer for MSTracer {
             let ray = camera.generate_ray(x as f64, y as f64);
             out += shader.shade(ray, datastructure.clone()) / self.samples_per_pixel as f64;
 
+<<<<<<< HEAD
             // print!("\r{x}, {y} ");
             // stdout().flush().unwrap();
+=======
+            //print!("\r{x}, {y} ");
+            //stdout().flush().unwrap();
+>>>>>>> mutex+buffer
         }
 
         out

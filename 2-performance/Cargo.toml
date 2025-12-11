@@ -12,7 +12,11 @@ log = "0.4"
 simple-logging = "2.0"
 rand = { version = "0.7", features = ["small_rng"] }
 serde_yaml = "0.8"
+<<<<<<< HEAD
 serde = { version = "1", features = ["derive"] }
+=======
+serde = {version = "1", features = ["derive"]}
+>>>>>>> mutex+buffer
 thiserror = "1"
 
 [dev-dependencies]
@@ -26,3 +30,8 @@ harness = false
 debug = true
 opt-level = 3
 lto = true
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> mutex+buffer

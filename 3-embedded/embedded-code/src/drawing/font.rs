@@ -1,37 +1,227 @@
 pub type Character = [[bool; 8]; 16];
 
-// TODO: this is one way to get a simple font in your program.
-//       finish this if you want to use it properly. Also add
-//       functions to screen.rs to draw a `Character`
-pub const ZERO: Character = [
-    [false, true, true, true, true, true, true, false],
-    [true, true, true, true, true, true, true, true],
-    [true, true, true, false, false, true, true, true],
-    [true, true, false, false, false, false, true, true],
-    [true, true, false, false, false, false, true, true],
-    [true, true, false, false, false, false, true, true],
-    [true, true, false, false, false, false, true, true],
-    [true, true, false, false, false, false, true, true],
-    [true, true, false, false, false, false, true, true],
-    [true, true, false, false, false, false, true, true],
-    [true, true, false, false, false, false, true, true],
-    [true, true, false, false, false, false, true, true],
-    [true, true, false, false, false, false, true, true],
-    [true, true, true, false, false, true, true, true],
-    [true, true, true, true, true, true, true, true],
-    [false, true, true, true, true, true, true, false],
-];
+const fn row(bits: u8) -> [bool; 8] {
+    [
+        bits & 0b1000_0000 != 0,
+        bits & 0b0100_0000 != 0,
+        bits & 0b0010_0000 != 0,
+        bits & 0b0001_0000 != 0,
+        bits & 0b0000_1000 != 0,
+        bits & 0b0000_0100 != 0,
+        bits & 0b0000_0010 != 0,
+        bits & 0b0000_0001 != 0,
+    ]
+}
 
-pub const NUMBERS: [Character; 1] = [
-    ZERO,
-    // TODO:
-    // ONE,
-    // TWO,
-    // THREE,
-    // FOUR,
-    // FIVE,
-    // SIX,
-    // SEVEN,
-    // EIGHT,
-    // NINE,
-];
+const fn digit(rows: [u8; 16]) -> Character {
+    [
+        row(rows[0]),
+        row(rows[1]),
+        row(rows[2]),
+        row(rows[3]),
+        row(rows[4]),
+        row(rows[5]),
+        row(rows[6]),
+        row(rows[7]),
+        row(rows[8]),
+        row(rows[9]),
+        row(rows[10]),
+        row(rows[11]),
+        row(rows[12]),
+        row(rows[13]),
+        row(rows[14]),
+        row(rows[15]),
+    ]
+}
+
+pub const ZERO: Character = digit([
+    0b0111_1111,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0100_0001,
+    0b0111_1111,
+]);
+
+pub const ONE: Character = digit([
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+    0b0001_1000,
+]);
+
+pub const TWO: Character = digit([
+    0b0111_1110,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0111_1110,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0111_1110,
+]);
+
+pub const THREE: Character = digit([
+    0b0111_1110,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0111_1110,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0111_1110,
+]);
+
+pub const FOUR: Character = digit([
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0111_1110,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+]);
+
+pub const FIVE: Character = digit([
+    0b0111_1110,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0111_1110,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0111_1110,
+]);
+
+pub const SIX: Character = digit([
+    0b0111_1110,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0100_0000,
+    0b0111_1110,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0111_1110,
+]);
+
+pub const SEVEN: Character = digit([
+    0b0111_1110,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+]);
+
+pub const EIGHT: Character = digit([
+    0b0111_1110,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0111_1110,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0111_1110,
+]);
+
+pub const NINE: Character = digit([
+    0b0111_1110,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0100_0010,
+    0b0111_1110,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+    0b0000_0010,
+]);
+
+pub const NUMBERS: [Character; 10] = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE];

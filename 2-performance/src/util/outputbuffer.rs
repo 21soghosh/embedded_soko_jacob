@@ -53,7 +53,11 @@ impl OutputBuffer {
         // for row in &self.buffer {
         //     for column in row {
         //         write!(f, "{}, {}, {};", column.x, column.y, column.z).unwrap();
+<<<<<<< HEAD
         //         f.flush().unwrap();
+=======
+        //         //f.flush().unwrap();
+>>>>>>> mutex+buffer
         //     }
         //     writeln!(f).unwrap();
         // }

@@ -10,3 +10,4 @@ tracing-subscriber = { version = "0.3", features=["fmt"] }
 color-eyre = "0.6.2"
 postcard = "1.1.3"
 serde = { version = "1.0.228", features = ["derive"] }
+message = { path = "../message" }

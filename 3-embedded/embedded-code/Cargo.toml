@@ -12,3 +12,4 @@ postcard = "1.1.3"
 serde = { version = "1.0.228", default-features = false, features = ["derive"] }
 # https://www.ti.com/lit/ds/symlink/lm3s6965.pdf
 tudelft-lm3s6965-pac = {version = "0.1", features = ["rt"]}
+message = { path = "../message" }

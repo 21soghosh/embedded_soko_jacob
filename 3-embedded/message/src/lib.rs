@@ -1,3 +1,5 @@
+#![no_std]
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -22,12 +24,11 @@ pub enum DisplayMode {
 
 impl Envelope {
     pub fn new(msg: Message) -> Option<Self> {
-        checksum_for(&msg).map(|checksum| Self { msg, checksum })
+        calculate_checksum(&msg).map(|checksum| Self { msg, checksum })
     }
 }
 
-pub fn checksum_for(msg: &Message) -> Option<u8> {
-    // serialize the message and compute a simple wrapping sum
+pub fn calculate_checksum(msg: &Message) -> Option<u8> {
     let mut buf = [0u8; 32];
     let encoded = postcard::to_slice(msg, &mut buf).ok()?;
     Some(encoded.iter().fold(0u8, |acc, b| acc.wrapping_add(*b)))

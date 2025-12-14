@@ -16,6 +16,8 @@ impl<T> Mutex<T> {
     // "locks" the mutex, and runs v as a critical section
     pub fn update<U>(&self, v: impl FnOnce(&mut T) -> U) -> U {
         interrupt::free(|_| {
+            // SAFETY: We are in a critical section, so no other code can access
+            // this data at the same time.
             let data = unsafe { &mut *self.data.get() };
             v(data)
         })
@@ -25,4 +27,3 @@ impl<T> Mutex<T> {
 
 
 unsafe impl<T> Sync for Mutex<T> where T: Send {}
-

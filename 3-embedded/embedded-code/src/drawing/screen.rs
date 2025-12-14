@@ -1,5 +1,5 @@
 use crate::drawing::brightness::Brightness;
-use crate::drawing::font::Character;
+use crate::drawing::font::{Character, NUMBERS};
 use tudelft_lm3s6965_pac::{GPIO_PORTC, SSI0};
 
 pub struct Screen<'p> {
@@ -135,7 +135,9 @@ impl<'p> Screen<'p> {
 
         loop {
             self.draw_pixel(x0 as u8, y0 as u8, brightness);
-            if x0 == x1 && y0 == y1 { break; }
+            if x0 == x1 && y0 == y1 {
+                break;
+            }
             let e2 = 2 * err;
             if e2 >= dy {
                 err += dy;
@@ -166,6 +168,95 @@ impl<'p> Screen<'p> {
         }
     }
 
+    pub fn render_step_counter(&mut self, total_steps: u32, player_brightness: Brightness) {
+        self.clear(Brightness::WHITE);
+        self.draw_number(4, 4, total_steps, player_brightness);
+    }
+
+    pub fn draw_trail(
+        &mut self,
+        trail: &Trail,
+        trail_brightness: Brightness,
+        player_brightness: Brightness,
+    ) {
+        self.clear(Brightness::WHITE);
+        if trail.is_empty() {
+            return;
+        }
+
+        let mut prev = trail.points[0];
+        for idx in 1..trail.len {
+            let curr = trail.points[idx];
+            self.draw_line(prev.0, prev.1, curr.0, curr.1, trail_brightness);
+            prev = curr;
+        }
+        self.draw_pixel(prev.0, prev.1, player_brightness);
+    }
+
+    fn draw_number(
+        &mut self,
+        origin_x: u8,
+        origin_y: u8,
+        mut value: u32,
+        player_brightness: Brightness,
+    ) {
+        if value == 0 {
+            self.draw_character(origin_x, origin_y, &NUMBERS[0], player_brightness);
+            return;
+        }
+
+        let mut digits = [0u8; 10];
+        let mut count = 0;
+        while value > 0 && count < digits.len() {
+            digits[count] = (value % 10) as u8;
+            value /= 10;
+            count += 1;
+        }
+
+        let mut x = origin_x;
+        for idx in (0..count).rev() {
+            let digit = digits[idx] as usize;
+            self.draw_character(x, origin_y, &NUMBERS[digit], player_brightness);
+            x = x.saturating_add(9); // 8px wide + 1px spacing
+        }
+    }
+}
+
+pub struct Trail {
+    points: [(u8, u8); Trail::MAX_POINTS],
+    len: usize,
+}
+
+impl Trail {
+    pub const MAX_POINTS: usize = 512;
+
+    pub fn new(x: u8, y: u8) -> Self {
+        let mut points = [(0u8, 0u8); Trail::MAX_POINTS];
+        points[0] = (x, y);
+        Self { points, len: 1 }
+    }
+
+    pub fn push(&mut self, x: u8, y: u8) {
+        if self.len < Trail::MAX_POINTS {
+            self.points[self.len] = (x, y);
+            self.len += 1;
+        } else {
+            // drop oldest point to make room for new one
+            for i in 1..Trail::MAX_POINTS {
+                self.points[i - 1] = self.points[i];
+            }
+            self.points[Trail::MAX_POINTS - 1] = (x, y);
+        }
+    }
+
+    pub fn clear(&mut self, x: u8, y: u8) {
+        self.points[0] = (x, y);
+        self.len = 1;
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len == 0
+    }
 }
 
 enum Mode {

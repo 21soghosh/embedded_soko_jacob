@@ -3,28 +3,8 @@ use std::io::{stdin, stdout, BufRead, Read, Write};
 use std::net::Shutdown;
 use std::thread;
 
-use serde::{Deserialize, Serialize};
+use message::{DisplayMode, Envelope, Message};
 use tudelft_arm_qemu_runner::Runner;
-
-#[derive(Serialize, Deserialize, Debug)]
-enum Message {
-    Move { dx: i8, dy: i8 },
-    MoveTo { x: u8, y: u8 },
-    SetDisplayMode(DisplayMode),
-    Reset,
-}
-
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
-enum DisplayMode {
-    Trail,
-    Steps,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Envelope {
-    msg: Message,
-    checksum: u8,
-}
 
 enum Command {
     Send(Message),
@@ -69,11 +49,11 @@ fn main() -> color_eyre::Result<()> {
                 Command::Send(msg) => {
                     let mut buf = [0u8; FRAME_CAPACITY];
                     match Envelope::new(msg) {
-                        Ok(envelope) => match postcard::to_slice_cobs(&envelope, &mut buf) {
+                        Some(envelope) => match postcard::to_slice_cobs(&envelope, &mut buf) {
                             Ok(encoded) => write_stream.write_all(encoded)?,
                             Err(err) => eprintln!("Failed to encode message: {err}"),
                         },
-                        Err(err) => eprintln!("Failed to prepare message: {err}"),
+                        None => eprintln!("Failed to prepare message: checksum calculation failed"),
                     }
                 }
                 Command::Help => print_help(),
@@ -91,19 +71,6 @@ fn main() -> color_eyre::Result<()> {
     reader.join().expect("Reader thread panicked")?;
     writer.join().expect("Writer thread panicked")?;
     Ok(())
-}
-
-impl Envelope {
-    fn new(msg: Message) -> color_eyre::Result<Self> {
-        let checksum = checksum_for(&msg)?;
-        Ok(Self { msg, checksum })
-    }
-}
-
-fn checksum_for(msg: &Message) -> color_eyre::Result<u8> {
-    let mut buf = [0u8; 32];
-    let encoded = postcard::to_slice(msg, &mut buf)?;
-    Ok(encoded.iter().fold(0u8, |acc, b| acc.wrapping_add(*b)))
 }
 
 fn parse_instruction(line: &str) -> Command {

@@ -64,6 +64,8 @@ impl Uart {
         uart.ctl.write(|w| w.uart_ctl_uarten().clear_bit());
 
         // configure for 115200 baud assuming 50 MHz system clock
+        // SAFETY: 27 and 8 are valid divisors per the datasheet for 50 MHz -> 115200 baud;
+        // the register only accepts a subset of values, and these constants are precomputed.
         uart.ibrd
             .write(|w| unsafe { w.uart_ibrd_divint().bits(27) });
         uart.fbrd
@@ -82,6 +84,9 @@ impl Uart {
             .write(|w| w.uart_ctl_rxe().set_bit().uart_ctl_txe().set_bit().uart_ctl_uarten().set_bit());
 
         unsafe {
+            // SAFETY: we install the UART0 interrupt handler in this module and the peripheral has
+            // been configured before enabling it, so unmasking NVIC here only allows that handler
+            // to run; required because `unmask` touches hardware registers.
             cortex_m::peripheral::NVIC::unmask(tudelft_lm3s6965_pac::Interrupt::UART0);
         }
 
@@ -92,7 +97,7 @@ impl Uart {
         for &b in value {
             // Wait until TX FIFO is not full
             while self.uart.fr.read().uart_fr_txff().bit_is_set() {}
-            // Write byte
+            // SAFETY: writing any u8 value to the data register is valid.
             self.uart.dr.write(|w| unsafe { w.uart_dr_data().bits(b) });
         }
     }

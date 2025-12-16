@@ -22,6 +22,81 @@ mod uart;
 
 mod mutex;
 
+struct GameState {
+    x: u8,
+    y: u8,
+    trail: Trail,
+    total_steps: u32,
+    display_mode: DisplayMode,
+}
+
+impl GameState {
+    fn new() -> Self {
+        let x = Screen::WIDTH / 2;
+        let y = Screen::HEIGHT / 2;
+        Self {
+            x,
+            y,
+            trail: Trail::new(x, y),
+            total_steps: 0,
+            display_mode: DisplayMode::Trail, // Standard visning
+        }
+    }
+
+    // Flytt logikken for å tilbakestille inn her
+    fn reset(&mut self, screen: &mut Screen) {
+        self.x = Screen::WIDTH / 2;
+        self.y = Screen::HEIGHT / 2;
+        self.total_steps = 0;
+        self.trail.clear(self.x, self.y);
+        self.refresh_display(screen);
+    }
+
+    fn refresh_display(&self, screen: &mut Screen) {
+        match self.display_mode {
+            DisplayMode::Trail => {
+                screen.draw_trail(&self.trail, TRAIL_BRIGHTNESS, PLAYER_BRIGHTNESS)
+            }
+            DisplayMode::Steps => screen.render_step_counter(self.total_steps, PLAYER_BRIGHTNESS),
+        }
+    }
+
+    // Flytt move_player logikken inn her for å unngå å sende 9 argumenter
+    fn move_player(&mut self, screen: &mut Screen, mut dx: i16, mut dy: i16, steps: u16) {
+        if steps == 0 {
+            return;
+        }
+
+        for _ in 0..steps {
+            let prev_x = self.x;
+            let prev_y = self.y;
+
+            if dx != 0 {
+                let step = dx.signum();
+                // Bruk saturating casts eller sjekker for klarhet
+                self.x = (self.x as i16 + step).clamp(0, Screen::WIDTH as i16 - 1) as u8;
+                dx -= step;
+            } else if dy != 0 {
+                let step = dy.signum();
+                self.y = (self.y as i16 + step).clamp(0, Screen::HEIGHT as i16 - 1) as u8;
+                dy -= step;
+            }
+
+            self.trail.push(self.x, self.y);
+
+            if self.display_mode == DisplayMode::Trail {
+                screen.draw_line(prev_x, prev_y, self.x, self.y, TRAIL_BRIGHTNESS);
+                screen.draw_pixel(self.x, self.y, PLAYER_BRIGHTNESS);
+            }
+        }
+        self.total_steps = self.total_steps.wrapping_add(1);
+
+        if self.display_mode == DisplayMode::Steps {
+            screen.render_step_counter(self.total_steps, PLAYER_BRIGHTNESS);
+        }
+    }
+}
+
 #[entry]
 fn main() -> ! {
     // hprintln is kind of like cheating. On real hardware this is (usually)
@@ -31,25 +106,19 @@ fn main() -> ! {
     hprintln!("code started");
     let mut dp = Peripherals::take().unwrap();
 
-    // initialize the screen
-    let mut screen = Screen::new(&mut dp.SSI0, &mut dp.GPIO_PORTC);
+   let mut screen = Screen::new(&mut dp.SSI0, &mut dp.GPIO_PORTC);
     screen.clear(Brightness::WHITE);
-    let mut pos_x = Screen::WIDTH / 2;
-    let mut pos_y = Screen::HEIGHT / 2;
-    let mut display_mode = DisplayMode::Trail;
-    let mut total_steps: u32 = 0;
-    let mut trail = Trail::new(pos_x, pos_y);
+    
+    // Initialize game
+    let mut game = GameState::new();
+    
+    // Draw starting position
+    screen.draw_pixel(game.x, game.y, PLAYER_BRIGHTNESS);
 
-    // draw the player
-    screen.draw_pixel(pos_x, pos_y, PLAYER_BRIGHTNESS);
-
-    // initialize the UART.
+    // UART setup
     let mut uart = Uart::new(dp.UART0);
-
-    // initialize receive buffer
     let mut rx_buf = [0u8; 32];
     let mut rx_len = 0usize;
-
     // main loop
     loop {
         // read all available bytes
@@ -57,26 +126,7 @@ fn main() -> ! {
             // check for end of message
             if byte == 0 {
                 if rx_len > 0 {
-                    match postcard::from_bytes_cobs::<Envelope>(&mut rx_buf[..rx_len]) {
-                        Ok(envelope) => match calculate_checksum(&envelope.msg) {
-                            Some(expected) if expected == envelope.checksum => {
-                                handle_message(
-                                    envelope.msg,
-                                    &mut screen,
-                                    &mut pos_x,
-                                    &mut pos_y,
-                                    &mut trail,
-                                    &mut total_steps,
-                                    &mut display_mode,
-                                );
-                            }
-                            Some(_) => hprintln!("Checksum mismatch, discarding message"),
-                            None => hprintln!("Failed to compute checksum, discarding message"),
-                        },
-                        Err(_) => {
-                            hprintln!("Invalid message received");
-                        }
-                    }
+                    process_packet(&mut rx_buf[..rx_len], &mut game, &mut screen);
                 }
                 rx_len = 0;
                 continue;
@@ -94,111 +144,40 @@ fn main() -> ! {
     }
 }
 
-fn move_player(
-    screen: &mut Screen,
-    pos_x: &mut u8,
-    pos_y: &mut u8,
-    mut dx: i16,
-    mut dy: i16,
-    steps: u16,
-    display_mode: DisplayMode,
-    trail: &mut Trail,
-    total_steps: &mut u32,
-) {
-    if steps == 0 {
-        return;
-    }
-
-    for _ in 0..steps {
-        let prev_x = *pos_x;
-        let prev_y = *pos_y;
-
-        if dx != 0 {
-            let step = dx.signum();
-            let new_x = (*pos_x as i16 + step).clamp(0, Screen::WIDTH as i16 - 1) as u8;
-            *pos_x = new_x;
-            dx -= step;
-        } else if dy != 0 {
-            let step = dy.signum();
-            let new_y = (*pos_y as i16 + step).clamp(0, Screen::HEIGHT as i16 - 1) as u8;
-            *pos_y = new_y;
-            dy -= step;
+fn process_packet(data: &mut [u8], game: &mut GameState, screen: &mut Screen) {
+     match postcard::from_bytes_cobs::<Envelope>(data) {
+        Ok(envelope) => {
+             if let Some(expected) = calculate_checksum(&envelope.msg) {
+                 if expected == envelope.checksum {
+                     handle_message(envelope.msg, game, screen);
+                 } else {
+                     hprintln!("Error: Checksum mismatch");
+                 }
+             } else {
+                 hprintln!("Error: Could not calculate checksum");
+             }
         }
-
-        trail.push(*pos_x, *pos_y);
-
-        if display_mode == DisplayMode::Trail {
-            screen.draw_line(prev_x, prev_y, *pos_x, *pos_y, TRAIL_BRIGHTNESS);
-            screen.draw_pixel(*pos_x, *pos_y, PLAYER_BRIGHTNESS);
-        }
-    }
-
-    *total_steps = total_steps.wrapping_add(1);
-
-    if display_mode == DisplayMode::Steps {
-        screen.render_step_counter(*total_steps, PLAYER_BRIGHTNESS);
+        Err(_) => hprintln!("Error: Malformed packet"),
     }
 }
 
-fn handle_message(
-    msg: Message,
-    screen: &mut Screen,
-    pos_x: &mut u8,
-    pos_y: &mut u8,
-    trail: &mut Trail,
-    total_steps: &mut u32,
-    display_mode: &mut DisplayMode,
-) {
+
+fn handle_message(msg: Message, game: &mut GameState, screen: &mut Screen) {
     match msg {
         Message::Move { dx, dy } => {
             let steps = (dx.abs() + dy.abs()) as u16;
-            hprintln!("Instruction: move dx {}, dy {}, steps {}", dx, dy, steps);
-            move_player(
-                screen,
-                pos_x,
-                pos_y,
-                dx as i16,
-                dy as i16,
-                steps,
-                *display_mode,
-                trail,
-                total_steps,
-            );
+            game.move_player(screen, dx as i16, dy as i16, steps);
         }
         Message::MoveTo { x, y } => {
-            let dx = x as i16 - *pos_x as i16;
-            let dy = y as i16 - *pos_y as i16;
+            let dx = x as i16 - game.x as i16;
+            let dy = y as i16 - game.y as i16;
             let steps = (dx.abs() + dy.abs()) as u16;
-            hprintln!("Instruction: move_to x {}, y {}, steps {}", x, y, steps);
-            move_player(
-                screen,
-                pos_x,
-                pos_y,
-                dx,
-                dy,
-                steps,
-                *display_mode,
-                trail,
-                total_steps,
-            );
+            game.move_player(screen, dx, dy, steps);
         }
-        Message::Reset => {
-            *pos_x = Screen::WIDTH / 2;
-            *pos_y = Screen::HEIGHT / 2;
-            *total_steps = 0;
-            trail.clear(*pos_x, *pos_y);
-
-            match *display_mode {
-                DisplayMode::Trail => screen.draw_trail(trail, TRAIL_BRIGHTNESS, PLAYER_BRIGHTNESS),
-                DisplayMode::Steps => screen.render_step_counter(*total_steps, PLAYER_BRIGHTNESS),
-            }
-        }
+        Message::Reset => game.reset(screen),
         Message::SetDisplayMode(mode) => {
-            *display_mode = mode;
-            match mode {
-                DisplayMode::Trail => screen.draw_trail(trail, TRAIL_BRIGHTNESS, PLAYER_BRIGHTNESS),
-                DisplayMode::Steps => screen.render_step_counter(*total_steps, PLAYER_BRIGHTNESS),
-            }
+            game.display_mode = mode;
+            game.refresh_display(screen);
         }
     }
 }

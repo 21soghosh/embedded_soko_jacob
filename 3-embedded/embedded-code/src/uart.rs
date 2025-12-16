@@ -58,35 +58,13 @@ pub struct Uart {
 
 impl Uart {
     pub fn new(uart: UART0) -> Self {
-        // let mut uart = uart;
-
-        // disable the UART while we configure it
-        uart.ctl.write(|w| w.uart_ctl_uarten().clear_bit());
-
-        // configure for 115200 baud assuming 50 MHz system clock
-        // SAFETY: 27 and 8 are valid divisors per the datasheet for 50 MHz -> 115200 baud;
-        // the register only accepts a subset of values, and these constants are precomputed.
-        uart.ibrd
-            .write(|w| unsafe { w.uart_ibrd_divint().bits(27) });
-        uart.fbrd
-            .write(|w| unsafe { w.uart_fbrd_divfrac().bits(8) });
-
-        // 8N1 with FIFO enabled
-        uart.lcrh
-            .write(|w| w.uart_lcrh_fen().set_bit().uart_lcrh_wlen().uart_lcrh_wlen_8());
-
         // enable receive interrupts and timeout interrupts
         uart.im
             .write(|w| w.uart_im_rxim().set_bit().uart_im_rtim().set_bit());
 
-        // turn the peripheral back on
-        uart.ctl
-            .write(|w| w.uart_ctl_rxe().set_bit().uart_ctl_txe().set_bit().uart_ctl_uarten().set_bit());
-
         unsafe {
-            // SAFETY: we install the UART0 interrupt handler in this module and the peripheral has
-            // been configured before enabling it, so unmasking NVIC here only allows that handler
-            // to run; required because `unmask` touches hardware registers.
+            // Why its safe: Since the only shared state is the BUFFER, which is controlled
+            // via a Mutex, it is safe to unmask the interrupt here.
             cortex_m::peripheral::NVIC::unmask(tudelft_lm3s6965_pac::Interrupt::UART0);
         }
 
@@ -117,12 +95,10 @@ impl Write for Uart {
 #[interrupt]
 unsafe fn UART0() {
     let uart = &*tudelft_lm3s6965_pac::UART0::ptr();
-    
+
     // Clear interrupts
-    uart.icr.write(|w| {
-        w.uart_icr_rxic().set_bit()
-         .uart_icr_rtic().set_bit()
-    });
+    uart.icr
+        .write(|w| w.uart_icr_rxic().set_bit().uart_icr_rtic().set_bit());
 
     // Read all available bytes from FIFO
     while uart.fr.read().uart_fr_rxfe().bit_is_clear() {
